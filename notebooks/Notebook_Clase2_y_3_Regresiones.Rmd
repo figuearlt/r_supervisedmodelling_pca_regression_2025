@@ -1,0 +1,414 @@
+---
+title: "Notebook_Clase2_y_3_Regresiones"
+author: "Diego Figueroa"
+date: "2025-05-17"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Regresión Lineal
+La regresión lineal es una técnica estadística fundamental utilizada para modelar la relación lineal entre una variable dependiente (o de respuesta) y una o más variables independientes (o predictoras). El objetivo es encontrar la mejor línea recta (en el caso univariado) o hiperplano (en el caso multivariado) que describa cómo la variable dependiente cambia en función de las variables independientes.
+
+### Regresión Lineal Univariada
+
+La regresión lineal univariada involucra una única variable predictora (X) para modelar una variable de respuesta (Y). El modelo se expresa de la siguiente manera:
+
+ $$Y_i = \beta_0 + \beta_1 X_i + \epsilon_i$$
+
+
+Donde:
+
+* $Y_i$ Representa el valor de la variable dependiente para la i-ésima observación.
+
+* $X_i$ Representa el valor de la variable independiente para la i-ésima observación.
+
+* $β_0$ Es la intersección (el valor de Y cuando X es 0).
+
+* $β_1$ Es la pendiente (el cambio en Y por cada unidad de cambio en X).
+
+* $ϵ_i$ Es el error aleatorio o residuo para la i-ésima observación, que representa la diferencia entre el valor observado y el valor predicho por el modelo. Se asume que estos errores tienen una media de cero y una varianza constante.
+
+El objetivo es estimar los coeficientes $β_0$ y $β_1$ que minimizan la suma de los cuadrados de los residuos (método de mínimos cuadrados ordinarios - OLS).
+
+### Regresión Lineal Múltiple
+
+La regresión lineal múltiple extiende el concepto a más de una variable predictora. El modelo general con p variables predictoras se escribe como:
+
+$$Y_i = \beta_0 + \beta_1 X_{i1} + \beta_2 X_{i2} + \dots + \beta_p X_{ip} + \epsilon_i$$
+ 
+
+En el modelo de regresión lineal múltiple:
+
+* $Y_i$ representa el valor de la variable dependiente para la $i$-ésima observación.
+* $X_{ij}$ representa el valor de la $j$-ésima variable independiente para la $i$-ésima observación (donde $j = 1, 2, \dots, p$).
+* $\beta_0$ es la intersección.
+* $\beta_j$ es el coeficiente asociado con la $j$-ésima variable predictora, representando el cambio en $Y$ por cada unidad de cambio en $X_j$, manteniendo constantes las demás variables predictoras.
+* $\epsilon_i$ es el error aleatorio para la $i$-ésima observación.
+
+Al igual que en la regresión univariada, el objetivo es estimar los coeficientes $\beta_0, \beta_1, \dots, \beta_p$ utilizando el método de mínimos cuadrados ordinarios, minimizando la suma de los cuadrados de los residuos.
+
+*Consideraciones Importantes:*
+* **Linealidad**: Se asume una relación lineal entre las variables predictoras y la variable de respuesta.
+* **Independencia de los errores**: Los errores deben ser independientes entre sí.
+* **Homocedasticidad**: La varianza de los errores debe ser constante para todos los niveles de las variables predictoras.
+* **Normalidad de los errores**: Los errores deben seguir una distribución normal (esta asunción es más importante para pruebas de hipótesis e intervalos de confianza).
+* **Multicolinealidad (en regresión múltiple)**: Las variables predictoras no deben estar altamente correlacionadas entre sí, ya que esto puede dificultar la interpretación de los coeficientes individuales.
+
+
+
+## Código clase:
+
+
+
+Entrenamos el modelo por medio del 80% de los datos.
+
+### Análisis Exploratorio
+
+Al revisar los datos, no encontramos con una relación no lineal entre las variables respecto de la distribución de la variable Ingresos por Ventas. La inversión en marketing en canales digitales (Youtube y Facebook) tienen un comportamiento no lineal(más bien logarítmico) respecto de las ventas, con una alta dispersión cuanto máS se invierta, obteniendo resultados mixtos, pero con una correlación entre [0.55, 0.58] para Facebook y entre [0.78, 0.8], utilizando métodos lineals (Pearson) como no lineales (Spearman), lo cual nos ayuda a introducirnos en cómo se verían los resultados previamente. Respecto a la inversión en prensa, no hay una clara asociación, observándose una alta dispersión (bajas inversiones están asociados a bajos como altos ingresos en ventas en un inicio); a medida que se incrementa la inversión en prensa se observan mejores resultados, pero con una alta dispersión y presencia de outliers, esto en línea con su baja correlación para ambos métodos (entre [0.19, 0.23]). Finalmente, un modelo lineal podría ayudar a aproximarse al comportamiento de las Ventas respecto de la inversión en Marketing.
+
+Respecto al comportamiento de los Ingresos por Ventas, vemos que no se observan casos de outliers claros al utilizar un criterio por debajo del límite inferior($Q_{1} - 1.5 * IQR$) y sobre el superior($Q_{3} + 1.5 * IQR$). Respecto a su distribución, vemos que los datos se encuentran concentrados hacia la izquierda,  sesgados ligeramente hacia valores más altos que empujan el promedio por sobre la mediana(16.8 vs 15.5, respectivamente). Además la distribución es *platicúrtica* (curtosis de -0.5) sugiriendo que los datos se encuentran menos concentrados en el centro, observándose uno más plano, indicando una emnor probabilidad de valores extremos en comparación de una distribución normal.
+
+```{r ,echo=FALSE}
+library(datarium)
+data(marketing)
+summary(marketing)
+```
+```{r Revisión variables vs Sales,include=TRUE}
+corr_variables_sales<-cor(marketing,method='pearson')
+corr_variables_sales_sp<-cor(marketing,method='spearman')
+
+library(corrplot)
+library(patchwork)
+
+par(mfrow=c(1,2))
+
+corrplot(corr_variables_sales,
+                  method = 'shade',
+         type = 'lower',
+         addCoef.col ='gray',
+         number.font = 2,
+         number.cex = 0.75,tl.srt = 45,tl.cex =0.8, 
+         title = 'Correlación Canales Marketing
+         (Pearson)',
+         mar = c(0,0,3,0))
+corrplot(corr_variables_sales_sp,method = 'shade',type = 'lower',
+         addCoef.col ='gray',
+         number.font = 2,
+         number.cex = 0.75,tl.srt = 60,tl.cex =0.8, 
+         title = 'Correlación Canales Marketing
+         (Spearman)',
+         mar = c(0, 0, 3, 0))
+
+```
+
+
+```{r,echo=FALSE,warning=FALSE}
+# Frecuencia de Sales
+library(e1071)
+library(ggplot2)
+skwness_sales<-skewness(marketing$sales) 
+kurtosis_sales<-kurtosis(marketing$sales)
+mean_sales <- mean(marketing$sales)
+median_sales <- median(marketing$sales)
+
+
+freq_sales<-ggplot(marketing,aes(x=sales))+
+    geom_histogram(fill="#85BB65", bins=30,color='white') +
+    
+    geom_vline(aes(xintercept = mean_sales),color='red',linetype='dashed',size=1,) +
+    geom_text(aes(x=mean_sales+1,y=22, label=paste("Promedio: ",
+              round(mean_sales,1))),color='red',fontface='italic' ,hjust=-.1) +
+    
+    geom_vline(aes(xintercept = median_sales),color='darkgreen',size=1,) +
+    geom_text(aes(x=median_sales,y=20, 
+                  label=paste("Mediana: ",round(median_sales,1))),
+              color='darkgreen',fontface='italic' ,hjust=-.4) +
+    
+    geom_text(aes(x=mean_sales+6,y=22,
+              label=paste("Skweness (Asimetría): ",round(skwness_sales,1))),
+              color='darkblue',fontface='italic' ,hjust=-.4) +
+    
+    geom_text(aes(x=mean_sales+8,y=20,
+                  label=paste("Kurtosis: ",round(kurtosis_sales,1))),
+                  color='purple',fontface='italic' ,hjust=-.4)+ 
+    labs(title = "Distribución de los Ingresos por ventas",x="Ingreso por Ventas", y="Cantidad",
+         ) +
+    xlim(0,38) + ylim(0,25)
+
+freq_sales
+```
+```{r}
+skwness_sales <- skewness(marketing$sales)
+kurtosis_sales <- kurtosis(marketing$sales)
+mean_sales <- mean(marketing$sales)
+median_sales <- median(marketing$sales)
+
+freq_sales <- ggplot(marketing, aes(x = sales)) +
+  geom_histogram(fill = "#85BB65", bins = 30, color = 'white') +
+  #geom_vline(aes(xintercept = mean_sales), color = 'red', linetype = 'dashed', size = 1) +
+  #geom_vline(aes(xintercept = median_sales), color = 'darkgreen', size = 1) +
+  labs(title = "Distribución de los Ingresos por ventas", x = "Ingreso por Ventas", y = "Cantidad",
+       subtitle = paste("Promedio:", round(mean_sales, 1), ", Mediana:", round(median_sales, 1),
+                        "\nAsimetría:", round(skwness_sales, 1), ", Kurtosis:", round(kurtosis_sales, 1))) +
+  xlim(0, 38)
+
+freq_sales
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+hist(marketing$sales)
+boxplot(marketing$sales)
+```
+
+
+
+
+```{r}
+q3_superior <- quantile(marketing$sales,0.75)
+q1_inferior <- quantile(marketing$sales,0.25)
+rango_intercuartil <- q3_superior - q1_inferior
+rango_iqr <- IQR(marketing$sales)
+
+#print(paste("El valor del rango intercuartil (IQR) es de:", rango_intercuartil))
+print(paste("El valor el rango intercuartil(IQR) es de: ",rango_iqr))
+
+limite_inferior <- q1_inferior -1.5*rango_iqr
+limite_superior <- q3_superior +1.5*rango_iqr
+
+posibles_outliers <- marketing$sales[marketing$sales<limite_inferior | marketing$sales>limite_superior]
+print(paste("El número de outliers obtenido por este criterio es: ", length(posibles_outliers)))
+
+```
+
+
+
+```{r, warning=FALSE}
+library(ggplot2)
+library(grid)
+
+# Youtube
+
+cor_yt_sales <-cor(x=marketing$youtube,y=marketing$sales)
+
+dist_yt_sales<-ggplot(marketing,aes(x=youtube,y=sales)) +
+  geom_point(color='#c4302b') +
+  geom_text(aes(x=min(youtube)+20,y=max(sales)-5),
+            label=paste("Corr: ", round(cor_yt_sales,3)))+
+  labs(title="Distribución Ventas vs Youtube",x="Inversión en Youtube",y="Ingresos por Ventas")
+
+dist_yt_sales
+
+# Meta
+
+cor_meta_sales <- cor(x=marketing$facebook,y=marketing$sales)
+dist_meta_sales<-ggplot(marketing,aes(x=facebook,y=sales)) +
+  geom_point(color='#3b5998') +
+  geom_text(aes(x=min(facebook)+20,y=max(sales)-5,
+                label=paste("Corr: ", round(cor_meta_sales,3))))+
+  labs(title="Distribución Ventas vs Meta",x="Inversión en Meta",y="Ingresos por Ventas")
+dist_meta_sales
+
+
+# Newspaper
+
+cor_newspaper_sales <- cor(x=marketing$newspaper,y=marketing$sales)
+dist_nw_sales<-ggplot(marketing,aes(x=newspaper,y=sales)) +
+  geom_point(color='#ff8000') +
+  geom_text(aes(x=max(newspaper)-5,y=min(sales)+5,
+                label=paste("Corr: ", round(cor_newspaper_sales,3))))+
+  labs(title="Distribución Ventas vs Periódico",x="Inversión en Periódico",y="Ingresos por Ventas")
+
+dist_nw_sales
+
+
+
+```
+### Análisis de Regresión
+
+#### Separación de los datos en entrenamiento y de testeo (80%)
+
+Para los canales digitales (YouTube y Meta), se encontró una correlación positiva y estadísticamente significativa (p < 0.01, r > 0.6) con el Ingreso por ventas, lo que sugiere una relación influyente y predecible. Estos hallazgos son robustos al 95% de nivel de confianza. Sin embargo, la inversión en Prensa mostró una correlación débil (r = 0.1) y no significativa (p = 0.1) con el Ingreso por ventas. Esto indica que, con el nivel de confianza considerado, no hay suficiente evidencia para afirmar que la inversión en Prensa tenga una relación lineal consistente con los ingresos generados por las ventas.
+
+```{r, Base de Marketing, echo=FALSE, include= TRUE, warning= FALSE}
+
+library(datarium)
+
+?marketing
+
+set.seed(123)
+train.filas <- sample(nrow(marketing),.8*nrow(marketing),replace=FALSE)
+train.datos <- marketing[train.filas,]
+test.datos <- marketing[-train.filas,]
+```
+
+
+```{r Test de Hipótesis de la correlación entre variables, echo=FALSE,warning=FALSE}
+cor.test(train.datos$youtube,train.datos$sales)
+cor.test(train.datos$facebook,train.datos$sales)
+cor.test(train.datos$newspaper,train.datos$sales)
+```
+#### Modelo Lineal Múltiple
+
+
+
+```{r Modelo Lineal Múltiple, echo=FALSE,warning=FALSE}
+
+linear_model_sales <- lm(sales~youtube+facebook+newspaper, data=train.datos)
+summary(linear_model_sales)
+plot(linear_model_sales$fitted.values,resid(linear_model_sales),pch=1,xlab=" ",ylab="")
+
+```
+#### Análisis de la Varianza
+
+Para evaluar la posible multicolinealidad entre las variables predictores examinamos el factor de inflación de varianza. Este cuantifica cuánto se incrementa la varianza del coeficiente de un predictor debido a la presencia de otros predictores correlacionados en el modelo. Con esto se sugiere que dados los bajos niveles de VIF, no encontramos evidencia de multicolinealidad entre los regresores del modelo. Vemos, tal como adelantábamos con la asociación de la correlación entre las variables predictoras, no hay evidencia de que entre estas influencien endógenamente la varianza que captura el modelo
+
+```{r Colinealidad}
+library(car)
+car::vif(linear_model_sales)
+```
+#### Influencia de los Outliers; ajuste y nuevo Modelo
+
+¿Existen datos que se excapan y mueven la predicción(efecto palanca)? Ahora al evaluar en qué medida cada observación invidual influencia en el modelo de regresión ajustado,
+
+  * Observaciones 6 y 131 muestran residuos estudentizados externamente grandes (StudRes de -3.02 y -5.69           respectivamente). Esto sugiere que el modelo no predice bien estos valores de ventas y podrían ser outliers     en la variable dependiente.
+  
+  * La observación 131 también tiene una distancia de Cook relativamente alta (CookD de 0.334). Esto indica que     esta observación tiene una influencia considerable en los coeficientes del modelo en general. Su eliminación     podría cambiar significativamente los resultados de la regresión.
+  
+  * La observación 6 también tiene una distancia de Cook notable (0.130), sugiriendo cierta influencia, aunque      menor que la observación 131.
+  
+  * La observación 166 tiene un residuo estudentizado moderado y una distancia de Cook baja, sugiriendo una         influencia limitada.
+  
+  * La observación 17 muestra un residuo pequeño y una distancia de Cook muy baja, indicando poca influencia.
+
+```{r }
+
+influencePlot(linear_model_sales)
+```
+
+Para decidir si una observación influyente debiese o no ser excluida, se pueden usar varios tipos de criterios, pero principalmente sería revisar la observación en los datos, ajustar el modelo sin esa observación y comparar, Compara con el modelo original para ver el impacto
+
+|
+```{r}
+influencia <- influence.measures(linear_model_sales)
+summary(influencia)
+```
+```{r identificar el dato en la base de entrenamiento, echo=FALSE}
+obs_influyentes <- which(apply(influencia$is.inf, 1, any))
+obs_influyentes
+```
+
+Lo que haremos es modificar la base de entrenamiento, eliminando aquel valor problemático que es el 131
+
+```{r Reentrenar el modelo con la base sin influencia, echo=FALSE}
+#train.datos_2<-train.datos[-obs_influyentes,]
+# train.datos[140,]
+train.datos_2<-train.datos[-c(59,99,140),]
+linear_model_sales_2 <-lm(data=train.datos_2,sales~youtube+facebook+newspaper)
+summary(linear_model_sales_2)
+
+```
+#### Evaluación de los Residuos del Modelo 2
+
+
+Al ajustar la base del modelo, tenemos que el comportamiento de los residuos aún se ve con cierta heterocedasticidad, pero tocaría evaluarlos con más detenimiento con otras pruebas. La idea es evaluar si los errores son i.i.d. (independientes e idénticamente distribuidos). Esto quiere decir que los errores no están relacionados entre sí, y que se distribuyen con una distribución normal. Para ello visualizamos los residuos respecto del modelo 2; evaluamos con los test de Brush-Pagan(para Varianza constante), Durbin-Watson(correlación entre los errores) y Normalidad
+
+```{r Revisión de Homocedasticidad, echo=FALSE}
+plot(linear_model_sales_2$fitted.values,resid(linear_model_sales_2),pch=1)#,xlab=" ",ylab="")
+```
+```{r Normalidad, echo=FALSE}
+qqPlot(linear_model_sales_2$residuals)
+```
+Aquí se rechazan las $H_{0}$ para presencia de Normalidad
+
+```{r Test de Normalidad, echo=FALSE}
+#Test Anderson Darling (paquete nortest)
+library(nortest)
+ad.test(linear_model_sales_2$residuals)
+cvm.test(linear_model_sales_2$residuals)
+lillie.test(linear_model_sales_2$residuals)
+
+```
+
+Ahora bien, ahora aplicaremos DW, sin embargo, hay que considerar que este tipo de métodos son para modelos con series de tiempo. Por lo que no se ajusta su aplicación. Lo que evalúa el modelo es la autocorrelación entre los residuos en el período $t$ respecto del período $t-1$. Estaríamos diciendo que existe información en los errores que están siendo influenciados por sucedos en el pasado, un período antes.
+
+
+```{r Durbin-Waton, echo=FALSE}
+library(lmtest)
+dwtest(linear_model_sales_2)
+
+```
+Evalúa ahora por medio del test de Breush-Pagan la varianza de 
+
+```{r Breusch-Pagan, echo=FALSE}
+bptest(linear_model_sales_2)
+```
+
+#### Ajuste para modelo 4
+
+```{r Modelo sin Newspapaer, echo=FALSE}
+linear_model_sales_3 <-lm(data=train.datos_2,sales~youtube+facebook)
+summary(linear_model_sales_3)
+```
+### Interpretación del modelo
+
+
+
+
+
+
+### Validación de la Muestra con los datos de Test
+
+```{r Probar los datos de test, echo=TRUE}
+
+a.test <- predict(linear_model_sales_3,newdata = data.frame(test.datos),interval = "prediction",level = 0.95)
+plot(test.datos[,4],a.test[,1])
+abline(0,1)
+
+```
+```{r Comparativa de los errores al cuadrado con un MCO, echo=FALSE}
+mse = mean((test.datos[,4]-a.test[,1])^2)
+mse
+```
+#### Nueva empresa que invierte en marketing
+
+
+```{r}
+empresa.nueva <- data.frame(263, 42, 73,"NA")
+names(empresa.nueva) <- c("youtube", "facebook", "newspaper","sales")
+prediccion_con_md3<-predict(linear_model_sales_3,newdata = empresa.nueva,interval = "prediction",level = 0.95)
+prediccion_con_md3
+```
+#### Empresa hipotética de la base usada
+
+
+```{r}
+prediccion_con_md3_hip<-predict(linear_model_sales_3,newdata = marketing[90,],interval = "prediction",level = 0.95)
+prediccion_con_md3_hip
+marketing[90,]
+```
+
+
+
+
+
+```{r ANOVA}
+#ANOVA
+summary(aov(sales~youtube+facebook+newspaper, data=train.datos))
+```
+
+```{r Residuos}
+#Residuos
+e=residuals(linear_model_sales)
+par(mfrow=c(1,2))
+#Histograma de residuos
+hist(e,main="Histograma de residuos",xlab="Residuos",col="skyblue")
+boxplot(e)
+```
+

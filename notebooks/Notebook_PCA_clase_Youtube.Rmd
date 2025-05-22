@@ -1,0 +1,125 @@
+---
+title: "PCA a Compras por Edades - Francia"
+author: "Diego Figueroa"
+date: "2025-05-09"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importación base de datos en R:
+
+Los datos desde la URL *https://github.com/rociochavezmx/Rocio-Chavez-youtube-Files/blob/master/compras%20edad.csv* son cargados, sin antes modificarlos a una estructura para datos Raw para poder cargarlo en R.
+Quedaría como *https://raw.githubusercontent.com/rociochavezmx/Rocio-Chavez-youtube-Files/master/compras%20edad.csv*
+
+
+```{r cargar datos desde github, echo=FALSE=TRUE, message=FALSE, warning=FALSE}
+# Link RAW para github
+# https://raw.githubusercontent.com/rociochavezmx/Rocio-Chavez-youtube-Files/master/compras%20edad.csv
+
+# Cargar librerías
+library(tidyverse)
+# url
+url <- "https://raw.githubusercontent.com/rociochavezmx/Rocio-Chavez-youtube-Files/master/compras%20edad.csv"
+## Leer el archivo directamente desde GitHub
+compras_edad <- read.csv(url, fileEncoding = "latin1",row.names = 1)
+# Mostrar primeras filas
+head(compras_edad)
+
+```
+
+
+```{r}
+library(FactoMineR)
+acp_compras <- PCA(compras_edad,graph = FALSE)
+plot(acp_compras, choix="ind")
+```
+**nota:** Si vemos aquí que los valores individuales están cercanos al origen, entonces este grupo o individuo no está bien representado por las dimensiones
+```{r Círculo de Correlaciones, echo=FALSE, include=TRUE}
+plot(acp_compras, choix="var")
+```
+
+**nota:** Este gráfico es el círculo de correlaciones, y mientras menor sea el angulo entre variables, mayor será la correlación entre estas. Pasa en el caso como en el caso de carnes y legumbres; o el de restauraciones y comunicaciones, las cuales se encuentran muy próximas. En cambio si hay un ángulo de 180° entre dos variables, la correlación entre estas será negativa; mientras que si es 90° no hay correlación entre estas. La longitud de las flechas muestra qué tan bien representada está una variable. Es práctico para saber identificar qué representa la Dimensión 1 y la Dimensión 2, en qué cuadrantes están las variables. Al igual que si lo comparamos entre cuadrantes con los grupos de individuos. Por ejemplo los individuos que están en el grupo de Menores de  años, en lo que más gastaron fue en vivienda, tabaco y comunicaciones; mientras que los que estaban entre  años 65 a 74 años gastaron menos en tabaco, ocio, enseñanza, comunicaciones, ropa.
+
+Ahora bien, esto es revisando visualmente los datos y comparándo ambas visualizaciones. Ahora para corroborar esos datos, utilizaremos un análisis de clusters jerárquico.
+
+```{r Cluster Jerárquico, echo=FALSE, include=TRUE}
+library("factoextra") # Librería para dendogramas
+compras_hcpc <- HCPC(acp_compras, nb.clust = 0, graph = FALSE)
+
+```
+
+Ahora crearemos el dendograma, luego de haber construido los PCA
+
+```{r dendograma, echo=FALSE, include=TRUE}
+fviz_dend(compras_hcpc,
+          cex = 0.6, #Tamaño de etiqueta
+          palette = 'lancet', # Para ver más opciones de colores tecleat ?ggpubr::ggpar
+          rect = TRUE,rect_fill = TRUE,
+          rect_border = 'lancet',
+          labels_track_height = 2.)
+
+```
+
+
+```{r Clusters por gr+afico de individuos, echo=FALSE ,include=TRUE}
+fviz_cluster(compras_hcpc,repel = TRUE,
+             cex = 0.6, #Tamaño de etiqueta
+          palette = 'lancet', # Para ver más opciones de colores tecleat ?ggpubr::ggpar
+          show.clust.cent=TRUE, #Aquí puedes ver el centroide de los clusters
+          rect_border = 'lancet',
+          ggtheme = theme_minimal(),
+          labels_track_height = 2.,
+          main = "Cluster de Individuos")
+
+```
+Si queremos graficar el dendograma en el plano del ACP, utilizamos:
+```{r}
+# Graficamos el dendograma sobre el plano del ACP
+plot(compras_hcpc , choice = "3D.map")
+```
+Le pedimos ahora que nos despliegue las variables más significativas para cada cluster
+
+```{r }
+# Le pedimos que nos despliegue las variables más significativas para cada cluster
+compras_hcpc$desc.var$quanti
+
+```
+La tabla que nos muestra tiene un formato donde nos muestra todas aquellas que tuvieron un p-value menor a 0.05, al momento de evaluar su importancia dentro de cada cluster. Las variables que forman el cluster no quiere decir que son las que más consumen. Revisar la columna v.test se debe observar. También se puede comparar el Promedio de los individuos del cluster respecto de la categoría vs el Promedio general de la categoría. En este caso, si gastan en promedio de la categoría por sobre el Promedio general de la categoría, entonces es mayor el gasto. En caso de v.test con signo negativo es al revés.
+Para el cluster 1, formado por aquellos individuos menor de 25 años y entre 25 y 34 años, las variables que más contribuyeran a que se formara este cluster fueron:
+
+  * la vivienda
+  * café
+  * La Salud
+  * Legumbres
+  * Carnes
+  * Pescados y Mariscos
+  * Frutas
+  
+Aquí observamos que el cluster gasta más en vivienda, agua,gas y electricidad; mientras que para el resto de variables son los que menos gastan entre los tres clusters. Otra manera de revisarlo  es viendo el **Mean in category vs el Overall mean**
+
+
+(El valor de los clusters los obtengo desde la visualización)
+
+
+```{r guardar la tabla y valores, echo=FALSE,include=TRUE}
+
+# Guardamos el resultado desplegado en pantalla en variables_clusters.txt
+sink("variables_clusters.txt") #Creo el archivo txt
+compras_hcpc$desc.var$quanti
+sink()
+
+```
+
+
+```{r , echo=FALSE, include=TRUE}
+# Guardamos en memoria la información de los clusters asignados
+clusters_asignados <- compras_hcpc$data.clust
+
+# Guardamos la información en un archivo csv
+write.csv(clusters_asignados,"clusters_sobre_acp.csv")
+
+```
+

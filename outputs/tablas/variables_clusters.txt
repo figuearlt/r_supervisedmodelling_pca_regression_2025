@@ -1,0 +1,23 @@
+$`1`
+                                  v.test Mean in category Overall mean sd in category Overall sd    p.value
+vivienda.agua.gas.electricidad  2.173901           5774.0   4551.42857           81.0  871.24457 0.02971256
+café.té.cacao                  -1.988312             58.5     90.28571           19.5   24.76584 0.04677721
+salud                          -2.094589            610.0    916.00000          195.0  226.32278 0.03620756
+legumbres                      -2.111452            237.0    357.57143           60.0   88.46445 0.03473347
+carnes                         -2.168089            569.5    936.71429          164.5  262.39050 0.03015193
+pescados.mariscos              -2.208042            108.5    228.71429           44.5   84.34405 0.02724137
+frutas                         -2.230530            120.0    236.57143           36.0   80.96358 0.02571230
+
+$`2`
+                          v.test Mean in category Overall mean sd in category Overall sd    p.value
+ropa.artículos_calzado -2.034456            975.0    1993.7143          259.0   775.7285 0.04190567
+restauración           -2.083467            569.5    1245.2857           38.5   502.4906 0.03720864
+transportes            -2.090935           2068.5    4033.5714          776.5  1455.9398 0.03653389
+tabaco                 -2.190030             71.0     330.0000           14.0   183.2126 0.02852207
+comunicaciones         -2.269928            581.5     967.2857           68.5   263.2933 0.02321198
+
+$`3`
+                                    v.test Mean in category Overall mean sd in category Overall sd    p.value
+mobiliario.equipamiento_doméstico 2.028586         2246.333     1870.429       49.86203   393.0888 0.04250049
+ocio.cultura                      2.022323         2877.333     2320.143       85.81505   584.4662 0.04314297
+

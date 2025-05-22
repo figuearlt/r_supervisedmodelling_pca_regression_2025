@@ -1,0 +1,242 @@
+---
+title: "Clase_1_PCA_autos"
+author: "Diego Figueroa"
+date: "2025-05-05"
+output:   
+  pdf_document:
+    keep_tex: true
+    highlight: tango
+    includes:
+        in_header: preamble.tex
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.pos = 'H')
+```
+# Clase 1 y 2 del Módulo II: Correlaciones y Reducción de Dimensiones
+
+## Carga de los datos
+
+Los datos son cargados desde un archivo txt, y ocupamos la librería __FactoMineR__ para realizar cálculos de PCA
+
+
+```{r Dataset, include=TRUE, echo=TRUE, fig.pos='H'}
+Dataset <- read.table("C:/Users/diego/OneDrive/Escritorio/Diplomado Data Science/Diplomado PUCV/Módulo_2_Componentes_Principales/autos.txt",
+                      header=TRUE,stringsAsFactors=TRUE, sep="",
+                      na.strings="NA", dec=".", strip.white=TRUE,row.names="NOMBRE")
+head(Dataset)
+```
+\newpage
+
+## Reducción de Dimensiones
+
+La Reducción de Dimensiones busca eficientar el almacenamiento y procesamiento de los datos cuando nos enfrentamos a grandes cantidades de estos y una gran diversidad de features que explican lo que buscamos responder acerca de un fenómeno.
+
+Sin embargo, en gran medida, todas las dimensiones son relevantes, por lo que buscamos encontrar un subset de estas que representen un nivel de información tal que explique lo más posible a una variable Y. Buscamos perder la menor cantidad de información con este método.
+
+Lo que podríamos hacer es examinar representaciones bidimensionales (o un máximo de 3 dimensiones), que denotaremos como z_{1} y z_{2}, donde estarán representadas un alto porcentaje de las variables correlacionadas- Ambas explican un % de la varianza (la información de la base que dispongo).
+
+
+## Métodos para Reducir Dimensiones:
+
+* PCA Robusto ()
+* PCA (Aplica a transformaciones lineales)
+* Kernel PCA (para casos de correlaciones entre variables no lineales)
+* Singular value decomposition (SVD)[Para compresión de imágenes]
+* Análisis Factorial (Es útil en marketing para ver grandes cantidades de variables que representarían o están relacionadas a pequeños conceptos englobadores, como 'satisfacción')
+* Linear Discriminant Analysis (LDA)[supervising learning]
+
+\newpage
+
+### Componentes Principales (PCA)
+
+Consiste en expresar un conjunto de combinaciones lineales de factores no correlacionados entre sí. Es importante resaltar el hecho de que el concepto de mayor información se relaciona con el de mayor variabilidad de varianza. Cuanto mayor sea la variabilidad de los datos (varianza) se considera que existe mayor ainformación, lo cual está relacionado al concepto de entropía.
+
+Los PCA Máx_{varianza} ya que buscan ganar la mayor cantidad de datos que pueda; y Min_{residuales} La distancia del dato hacia el vector de la variable estimada
+
+
+
+#### Procedimiento
+
+Se requiere en una primera etapa, y siempre con un uso más exploratorio de los datos, revisar la matriz de correlación. Aquí se busca cierto razonamiento de selección de variables que tenga cierta correlación (por ahora lineal) de los datos, ocupando la correlación de **Pearson**. Igualmente dejaremos el print de cómo se puede hacer con **Spearman** y **Kendal**
+
+```{r correlación Pearson, include=TRUE, fig.pos='H'}
+# Mide la relación lineal entre dos variables continuas. Y supone normalidad en los datos, funcionando poco en presencia de valores atípicos o relaciones no lineales
+cor(Dataset[,c("CYL", "POT", "LAR", "ANCHO", "PESO", "VEL","PRECIO")],use="complete",method = "pearson")
+```
+\newpage
+
+```{r visual de matriz de correlación, include=TRUE, fig.pos='H'}
+
+library(corrplot)
+corrplot(cor(Dataset[,c("CYL", "POT", "LAR", "ANCHO", "PESO", "VEL","PRECIO")],use="complete",method="pearson"),method="shade")
+
+```
+
+
+```{r correlación Spearman, include = TRUE, fig.pos='H' }
+# Mide la asociación monótona( cuanto una variable sube, la otra también sube o baja, no necesariamente de forma lineal)
+# Se basa en rangos, por lo que es más robusta a outliers y no requiere de normalidad. I deal cuando la relación es no lineal, pero sí ordenada.
+cor(Dataset[,c("CYL", "POT", "LAR", "ANCHO", "PESO", "VEL","PRECIO")],use="complete",method = "spearman")
+
+```
+
+\newpage
+
+```{r correlación Kendall, include = TRUE, fig.pos='H'}
+# Similar a Spearman, pero usa pares concordantes/discordantes. Más conservadora y mejor para muestras pequeñas
+cor(Dataset[,c("CYL", "POT", "LAR", "ANCHO", "PESO", "VEL","PRECIO")],use="complete",method = "kendall")
+```
+
+
+Se necesitan aplicar test de Barlett y el cálculo del índice KMO. El primero se utiliza para PCA como Análisis Factorial para evaluar si una matriz de correlación de las variables es significativamente diferente a una matriz de identidad.
+
+H_{0}: La matriz de correlación es una matriz de identidad
+H_{1}: La matriz de correlación no es una matriz de identidad, por lo que existe correlación significativa entre las variables.
+
+```{r dplyt & Dataset_sin_lujo, echo=TRUE,include=FALSE, fig.pos='H'}
+library(dplyr)
+Dataset_sin_lujo <- Dataset %>% select(-LUJO)
+head(Dataset_sin_lujo)
+```
+\newpage
+
+```{r Test de Barlett, echo=TRUE,include=TRUE, fig.pos='H'}
+library("EFAtools")
+BARTLETT(cor(Dataset_sin_lujo),N=nrow(Dataset))
+
+```
+
+En el segundo caso, el índice KMO busca evaluar ka adecuación de los datos para la reducción de dimensionalidad. Responde a la pregunta ¿Es apropiado aplicar PCA a este conjunto de datos? Su valor varía entre 0 y 1. Un KMO alto sugiere que las variables comparten una cantidad significativa de varianza común y que la correlaciones entre ellas no son debido a la influencia de otras variables. En este escenario, el PCA tiene más probabilidad de identificar componentes principales que representen de manera efectiva la estructura subyacente de los datos y lograr una reducción de dimensionalidad útil.
+
+```{r índice KMO, echo=TRUE,include=TRUE, fig.pos='H'}
+KMO(cor(Dataset_sin_lujo),cor_method = 'spearman')
+
+```
+Ahora, al ya establecer que es necesario el cálculo de los PCA, entonces ejecuto considerando todas las variables, pero de manera discrecional dejaremos el PRECIO fuera, ya que puede bien ser explicado por las otras 6 variables.
+
+\newpage
+
+
+
+```{r librerías, include=FALSE}
+#install.packages("Rcmdr")         # Interfaz gráfica
+#install.packages("FactoMineR")    # Paquete para análisis multivariado
+#install.packages("RcmdrPlugin.FactoMineR")  # Plugin que conecta ambos
+#library(Rcmdr) #Asegúrate de no estar ejecutando en un archivo .Rmd (debe ser en la consola normal de RStudio o en R GUI).
+```
+
+
+```{r PCA , echo=TRUE,include=TRUE, fig.pos='H'}
+library(FactoMineR)
+
+Dataset.PCA<-Dataset[, c("CYL", "POT", "LAR", "ANCHO", "PESO", "VEL","PRECIO","LUJO")]
+
+res<-PCA(Dataset.PCA , scale.unit=TRUE, ncp=5, quanti.sup=c(7: 7),quali.sup=c(8: 8), graph =FALSE)
+
+```
+
+
+
+Aquí estamos representando los datos en dos Dimensiones
+
+```{r, fig.pos='H'}
+
+print(plot.PCA(res, axes=c(1, 2), choix="ind", habillage="none",col.ind="black", col.ind.sup="blue", col.quali="magenta", label=c("ind","ind.sup", "quali"),new.plot=TRUE, title="PCA graph of individuals"))
+```
+\newpage
+
+Mientras que aquí puedo ver qué variables representan o son aglomeradas por las dos dimensiones construidas. Aquí apróximadamente perdimos un 10% del total de información de la varianza con el método de PCA **100% - (73.68% + 14.27%)=12.05%**. Si revisamos el gráfico cada vector es una representación visual de la información obtenida del *feature* de cada auto. Vemos que mientras más se acerca a la esfera de radio 1, más cerca está de tener la información completa, pese al PCA. Aquí la que más se acerca a su máximo de información son las variables de LARGO, POTENCIA y VELOCIDAD, mientras que las que más pierden son CYL y PESO.
+
+Adicionalmente, en la dirección que muestre el vector, será la relación directa o inversa que tendrán los datos. Por ejemplo,en el eje horizontal aquellos que se encuentren a la derecha del círculo, serán más veloces, más potentes, con más peso, largos y anchos. En cambio si van en la dirección contraria, significa que que son lentos, menos potentes, de menor peso, más cortos y más angostos. Aquí podríamos ver autos según el cuidado del medioambiente.
+
+Ahora bien, en el eje vertical, debido a que la información considera solamente un 14% de la información, acaba siendo más por intuición. Arriba se encuentran autos más veloces y potentes, pero de menor peso, más chicos y angostos (podrían ser autos deportivos quizás), mientras que mirando hacia abajo es lo opuesto, pudiendo ser autos más friendly o familiares.
+
+
+```{r, fig.pos='H'}
+print(plot.PCA(res, axes=c(1, 2), choix="var", new.plot=TRUE,col.var="black", col.quanti.sup="blue", label=c("var", "quanti.sup"),lim.cos2.var=0, title="PCA graph per variable"))
+
+```
+
+\newpage
+
+Los eigenvalues (o valores propios) representan la varianza explicada por cada componente principal. Cuanto mayor sea un eigenvalue, más información (variabilidad) de los datos originales contiene ese componente.
+  * Si sumamos todos los eigenvalues, obtenemos la varianza total del conjunto de datos estandarizados (equivale al número de variables cuando están estandarizadas).
+  * El % de varianza explicada por cada dimensión nos dice qué proporción del comportamiento original de los datos es retenido en ese eje.
+
+  
+#### Interpretación Eigenvalues: ¿Cuánta información explica cada componente?
+
+  * El primer componente explica casi el 79% de la información del dataset, lo que indica que resume gran parte de la variabilidad.
+  *  Con los primeros dos componentes, alcanzamos más del 90%, lo que sugiere que podemos visualizar y analizar los datos en un espacio bidimensional sin perder demasiada información.
+
+#### Importancia del % de varianza explicada:
+  * Nos ayuda a decidir cuántos componentes mantener. En ciencia de datos se suele usar el criterio del codo para elegir el punto donde el aumento de varianza explicada comienza a disminuir drásticamente.
+
+```{r Criterio del Codo, include=TRUE,echo=FALSE,fig.pos='H'}
+library(factoextra)
+library(ggplot2)
+# Gráfico de eigenvalues (scree plot)
+fviz_eig(res,
+         addlabels = TRUE,     # Mostrar % varianza explicada
+         barfill = "steelblue",
+         barcolor = "black",
+         linecolor = "red") +
+  ggtitle("Scree Plot - Criterio del Codo") +
+  theme_minimal()
+remove(Dataset.PCA)
+```
+
+
+  * cos2: Indica qué tan bien se representa un individuo en un eje (como un R²); valores cercanos a 1 indican una buena representación.
+
+  * ctr (contribución): Mide cuánto influye un individuo en la formación del eje/Dim_{i}. Valores altos indican que ese punto fue determinante para definir esa dimensión.
+
+#### Ejemplo Individuos (observaciones): ¿Cómo se proyectan los autos?:
+
+  * El Toyota Corolla tiene un cos2 = 0.976 en Dim 1, lo que significa que su ubicación en ese eje es muy representativa de su perfil.
+  * También tiene una contribución importante a ese eje (16.292), lo que indica que ayuda a definir la dirección principal de la variabilidad en los datos.
+  * Otra manera de reforzar la presencia de valores atípicos que puedan afectar nuestro cálculo es por medio de las Distancias entre los puntos, donde observo en la siguiente tabla que el RENAULT-30-TS y el TOYOTA-COROLLA tienen una distancia promedio muy por sobre el resto de los autos. Lo que también informa en que contribuye o influencia en la construcción de la primera dimensión, donde respectivamente para la dimensión 1 influencia en un 22.43% y un 19.69%. Es bastante para ser outliers. Existen algunas soluciones como ocupar PCA más robustos que puedan trabajar con valores de outliers.
+
+\newpage
+
+```{r, fig.pos='H'}
+summary(res, nb.dec = 3, nbelements=10, nbind = 10, ncp = 3, file="")
+
+```
+
+
+#### Interpretación: de las Variables activas: ¿Qué variables explican los ejes?
+
+  * El primer eje está principalmente determinado por variables como PESO, LARGO, ANCHO y POTENCIA, todas relacionadas con el tamaño y fuerza del auto.
+
+  * Estas variables tienen un cos2 cercano a 1 en Dim 1, lo que indica que están altamente correlacionadas con ese componente.
+
+
+#### ¿Qué son variables suplementarias
+
+Son variables no utilizadas para construir los ejes, pero que se proyectan sobre el espacio PCA para ver cómo se relacionan con la estructura hallada.
+
+En este caso  Variables suplementarias cuantitativas:
+
+  * VEL (Velocidad) no definió los ejes, pero está moderadamente asociada al primer componente (cos2 = 0.433).
+
+  * Esto sugiere que los autos más veloces tienden a estar asociados con dimensiones como el peso o la potencia.
+
+\newpage
+
+#### ¿Qué son categorías suplementarias?
+
+Son variables categóricas (factores) que no definen los ejes, pero permiten ver cómo se distribuyen sus niveles en el espacio de componentes. En este caso: la categoría LUJO.
+
+Se evalúan mediante el v.test las Categorías suplementarias cualitativas (LUJO):
+
+  * Valores altos (en valor absoluto) indican que una categoría está fuertemente asociada con un eje y su posición no es aleatoria.
+
+Esto permite estudiar si, por ejemplo, los autos de lujo están agrupados en una región específica del plano PCA (lo que implicaría un perfil técnico distinto a los no lujosos).
+
+**palabras clave: Contribución a la Dimensión i ; Alineación cercana a 1 por Eigenvalues; y Representación de la variable en la dimensión**
+
+
+
