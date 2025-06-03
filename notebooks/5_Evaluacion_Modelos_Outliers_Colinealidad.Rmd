@@ -30,7 +30,7 @@ $$
 
 
 ```{r, echo=FALSE, out.width="80%", fig.align="center"}
-knitr::include_graphics("C:/Users/diego/OneDrive/Escritorio/Diplomado Data Science/Diplomado PUCV/clase1_r_supervised_pca_regression_2025/resources/bias_variance_tradeoff.png")
+knitr::include_graphics("C:/Users/diego/OneDrive/Escritorio/Diplomado Data Science/Diplomado PUCV/r_supervisedmodelling_pca_regression_2025/resources/bias_variance_tradeoff.png")
 
 ```
 
@@ -123,6 +123,107 @@ Donde:
 
 Buscamos solucionar:
 - La colinealidad de baja dimensión (pocos predictores)
+
+##### Caso Ejemplo: MTCARS
+
+```{r}
+mtcars2 <- within(mtcars, {
+  vs <- factor(vs, labels = c("V", "S"))
+  am <- factor(am, labels = c("automatic", "manual"))
+  cyl <- factor(cyl, labels = c("4", "6","8"))
+  gear <- factor(gear, labels = c("3", "4","5"))
+  carb <- factor(carb, labels = c("1", "2","3","4","6","8"))
+})
+#Comentario:
+#Aunque las variables Cyl, gear y carb tienen el sentido del orden, lo defino 
+#como "factor" porque cilindros de un auto, no se puede comparar con cilindros de otra.
+
+#Se puede incorporar "ordered" cuando estamos con variables que tienen espacio regular
+#entre niveles (pocos niveles) tal como temperatura= 20, 40 y 60°C, concentracion de
+#producto 10, 20 y 30 g/L. En las salidas se entrega resultados con regresión polinomial
+lin<-lm(mpg~cyl+disp+hp+drat+wt+qsec+gear+carb,data=mtcars2)
+summary(lin)
+
+```
+```{r}
+cor(mtcars[,c(-2,-8-9-10,-11)])
+```
+Hay predictores que tienen alta correlación entre predictores como hp y wt
+
+```{r}
+
+library(car)
+car::vif(lin)#calculo de los VIF para cada variable tomando en cuenta los grados de libertad de las variables categoricas
+cal.vif<-car::vif(lin)
+cal.vif[,3]<-cal.vif[,3]^2
+cal.vif#hay que considerar el cuadrado para poder ocupar las mismas reglas arbitrarias
+
+```
+
+```{r}
+###################################################
+#1a solución: eliminar las variables problematicas#
+###################################################
+
+#eliminamos la variable con el VIF el más alto
+lin2<-lm(mpg~cyl+hp+drat+wt+qsec+gear+carb,data=mtcars2)
+car::vif(lin2)
+cal.vif2<-car::vif(lin2)
+cal.vif2[,3]<-cal.vif2[,3]^2
+cal.vif2
+summary(lin2)
+```
+
+```{r}
+#el VIF asociado a la variable "hp" sigue alto
+
+lin3<-lm(mpg~cyl+drat+wt+qsec+gear+carb,data=mtcars2)
+car::vif(lin3)
+cal.vif3<-car::vif(lin3)
+cal.vif3[,3]<-cal.vif3[,3]^2
+cal.vif3
+summary(lin3)
+```
+**Se puede eliminar otras variables de este modelo en una etapa posterior, pero en esta etapa hemos arreglado el problema de colinealidad**
+**quizas seria un error eliminar "wt" porque es la variable la más significativa y la mas correlacionada con mpg. Podemos parar aquí o seguir eliminando "qsec"**
+
+```{r}
+lin4<-lm(mpg~cyl+drat+wt+gear+carb,data=mtcars2)
+car::vif(lin4)
+cal.vif4<-car::vif(lin4)
+cal.vif4[,3]<-cal.vif4[,3]^2
+cal.vif4
+summary(lin4)#Ninguna variable parece pertinente en este modelo, salvo quizás la variable "carb". El modelo 3 es mejor.
+
+```
+Cuando modifico el lambda estoy penalizando el modelo, mientras no lo haga hago la regresión lineal común y silvestre.
+```{r}
+library(MASS)
+lm.ridge(mpg~cyl+disp+hp+drat+wt+qsec+gear+carb,data=mtcars2, lambda = 0)#NO ridge regression
+h<-seq(14, 15, by=0.01)
+rid<-lm.ridge(mpg~cyl+disp+hp+drat+wt+qsec+gear+carb,data=mtcars2, lambda = h)#ridge regression
+#rid$GCV
+#rid$coef[,48]
+#Para ubicar exactamente el punto optimal y aplicarlo 
+```
+
+```{r}
+plot(h,rid$GCV)#GCV Validación Cruzada Generalizada
+```
+
+
+```{r}
+rid<-lm.ridge(mpg~cyl+disp+hp+drat+wt+qsec+gear+carb,data=mtcars2, lambda = 14.653)
+rid$coef#estimación con el parametro "ridge" optimal
+
+
+```
+
+
+
+
+
+
 
 ---
 
