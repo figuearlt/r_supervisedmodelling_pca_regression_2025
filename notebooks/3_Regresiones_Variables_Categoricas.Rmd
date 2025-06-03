@@ -1,0 +1,269 @@
+---
+title: "Notebook_Clase4_Regresion_Categorica"
+author: "Diego Figueroa"
+date: "2025-05-22"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Regresión Lineal Múltiple con Regresores Cuantitativos y Categóricos
+La regresión lineal múltiple es una técnica estadística que permite modelar la relación entre una variable dependiente ($Y$) y dos o más variables independientes (regresores o predictores) ($X_{1},X_{2},…,X_{p}$). La característica principal que la distingue de la regresión lineal simple es la inclusión de múltiples predictores, lo que permite un análisis más complejo y realista de las relaciones.
+
+Cuando los regresores son una mezcla de variables cuantitativas y categóricas, el modelo se vuelve más versátil.
+
+## El Modelo
+La ecuación general de la regresión lineal múltiple es:
+
+$$ Y=β_{0}+β_{1}X_{1}+β_{2}X_{2}+...+β_{p}X_{p}+ϵ$$
+
+Donde:
+
+* $Y$: Variable dependiente (cuantitativa).
+* $β_{0}$: Intercepto o constante, el valor esperado de Y cuando todas las X son cero.
+* $β_{i}$: Coeficientes de regresión para cada variable independiente $X_{i}$.
+  Representan el cambio promedio en Y por cada unidad de cambio en $X_{i}$, manteniendo las otras variables constantes.
+* $X_{i}$: Variables independientes (regresores).
+* $ϵ$: Término de error aleatorio, que representa la parte de Y no explicada por las variables independientes. Se asume que ϵ sigue una distribución normal con media cero y varianza constante.
+
+### Tratamiento de Variables Categóricas (Variables Dummy)
+Las variables categóricas no pueden incluirse directamente en el modelo de regresión lineal. Para ello, se transforman en un conjunto de variables binarias (0 o 1) llamadas variables dummy o indicadoras.
+
+Si una variable categórica tiene $k$ categorías, se crean $k−1$ variables dummy. Una de las categorías se elige como la categoría de referencia (o base), y no se le asigna una variable dummy explícita. Los coeficientes de las variables dummy representan la diferencia en la media de Y entre la categoría a la que pertenece la dummy y la categoría de referencia, manteniendo constantes las otras variables.
+
+**Ejemplo**: Si tenemos una variable categórica "Género" con tres categorías: "Masculino", "Femenino" y "No Binario".
+
+* Si elegimos "Masculino" como categoría de referencia:
+
+  * $X_{Femenino}$: 1 si es Femenino, 0 en otro caso.
+
+  * $X_{NoBinario}$: 1 si es No Binario, 0 en otro caso.
+
+* El coeficiente para $X_{Femenino}$ representaría la diferencia en Y entre mujeres y hombres (categoría de referencia), manteniendo las otras variables constantes.
+
+### Supuestos del Modelo de Regresión Lineal Múltiple
+Para que los resultados de la regresión sean válidos y eficientes (es decir, los estimadores sean los mejores, lineales e insesgados - BLUE por sus siglas en inglés), se deben cumplir varios supuestos:
+
+* **Linealidad**: La relación entre las variables independientes y la variable dependiente es lineal.
+* **Independencia de los errores**: Los errores (ϵ) no están correlacionados entre sí. Esto significa que la observación de un error no influye en la observación de otro. La violación de este supuesto se conoce como autocorrelación.
+* **Homocedasticidad**: La varianza de los errores es constante para todos los niveles de las variables independientes. La violación de este supuesto se conoce como heterocedasticidad.
+* **Normalidad de los errores**: Los errores se distribuyen normalmente. Esto es importante para la inferencia estadística (cálculo de intervalos de confianza y pruebas de hipótesis).
+* **Ausencia de multicolinealidad perfecta**: Las variables independientes no deben estar perfectamente correlacionadas entre sí. Una alta correlación entre predictores (multicolinealidad) puede dificultar la interpretación de los coeficientes y aumentar sus errores estándar.
+
+### Tests de Validación del Modelo
+La validación del modelo de regresión es crucial para asegurar que los resultados sean confiables y que los supuestos del modelo se cumplen.
+
+  1. **Test de Hipótesis para los Coeficientes (Pruebas t de Student)** Para cada coeficiente $β_{i}$ , se
+  realiza una prueba t para determinar si es estadísticamente significativo (diferente de cero).
+
+  *Hipótesis Nula* ($H_{0}$): $β_{i}=0$ (La variable $X_{i}$ no tiene un efecto lineal significativo sobre $Y$).
+  *Hipótesis Alternativa* ($H_{1}$): $β_{i}\ no\ es\ 0$ (La variable $X_{i}$ sí tiene un efecto lineal
+  significativo sobre Y).
+  Si el p-valor asociado a la prueba t es menor que un nivel de significancia α (comúnmente 0.05), se rechaza la
+  hipótesis nula, concluyendo que la variable $X_{i}$ es un predictor significativo.
+
+  2. **Test de Significancia Global del Modelo (Prueba F)** La prueba F evalúa si al menos uno de los
+  predictores es estadísticamente significativo en la explicación de la variabilidad de Y.
+
+Hipótesis Nula:
+$$H_{0}: β_{1}\ =β_{2}=…=β_{p}=0$$ 
+$$\ Ninguno\ de\ los\ predictores\ tiene\ un\ efecto\ significativo\ sobre\ Y$$
+Hipótesis Alternativa 
+$$H_{1}: Al menos\ un\ β_{i}\neq0$$ 
+$$Al\ menos\ uno\ de\ los\ predictores\ tiene\ un\ efecto\ significativo\ sobre\ Y$$
+
+Un p-valor bajo para la prueba F indica que el modelo en su conjunto es estadísticamente significativo.
+
+3. **Coeficiente de Determinación** ($R^2$) El $R^2$ mide la proporción de la variabilidad total de la variable dependiente que es explicada por las variables independientes en el modelo. Su valor oscila entre 0 y 1.
+
+$R^2=0$: El modelo no explica nada de la variabilidad de Y.
+$R^2=1$: El modelo explica el 100% de la variabilidad de Y.
+Un $R^2$ alto generalmente indica un buen ajuste del modelo, pero no es el único criterio.
+
+4. **El $R^2$ Ajustado** (Adjusted $R^2$) El $R^20$tiende a aumentar con cada variable adicional, incluso si no es significativa. El $R^2$ ajustado corrige esto penalizando la inclusión de predictores no útiles. Es una métrica más confiable para comparar modelos con diferente número de predictores.
+
+5. **Análisis de Residuos** (Diagnóstico de Supuestos)
+Los residuos ($e_{i}=Y_{i}−Y^i$) son las diferencias entre los valores observados y los valores predichos por el modelo. Su análisis es fundamental para verificar los supuestos:
+  
+  * *Gráfico de Residuos vs. Valores Predichos* (o vs. cada predictor):
+  
+  * *Homocedasticidad*: Los puntos deben dispersarse aleatoriamente alrededor de cero, sin patrones evidentes (forma de cono o embudo indica heterocedasticidad).
+  * *Linealidad*: No deben observarse patrones curvilíneos.
+  * *Histograma o Q-Q Plot de Residuos*:
+
+  * *Normalidad*: El histograma de los residuos debe ser aproximadamente simétrico y con forma de campana (normal). En un Q-Q plot, los puntos deben seguir aproximadamente una línea recta.
+  * *Gráfico de Residuos vs. Orden de Observación* (o Series de Tiempo):
+  * *Independencia*: No deben observarse patrones o tendencias si los datos tienen un orden temporal. El Test de Durbin-Watson es una prueba formal para detectar autocorrelación. Un valor cercano a 2 sugiere ausencia de autocorrelación.
+
+6. *Detección de Multicolinealidad*
+La multicolinealidad se detecta comúnmente con:
+
+  * Matriz de Correlación: Correlaciones elevadas (ej. ∣r∣>0.7) entre variables independientes sugieren multicolinealidad.
+  * Factor de Inflación de la Varianza (VIF): El VIF mide cuánto se infla la varianza de un coeficiente estimado debido a la multicolinealidad.
+      * $VIF = 1$: No hay multicolinealidad.
+      * $VIF > 5\ ó\ 10$ (regla general): Indica un problema de multicolinealidad que podría afectar la estabilidad de los coeficientes.
+
+\newpage
+
+
+## CÓDIGO
+
+### Datos Simulados
+
+```{r}
+n<-10000
+x<-matrix(0,n,1)
+x[1:(n/2),]=1
+eps<-rnorm(n)
+y<-x+eps
+
+y1<-y[1:(n/2),]
+y2<-y[(n/2+1):n,]
+```
+
+
+```{r}
+boxplot(y1,y2)
+```
+
+```{r}
+x<-factor(x,labels=c("0","1"))
+oneway<-aov(y~x)
+summary(oneway)
+```
+```{r}
+reg <- lm(y~x)
+summary(reg)
+```
+\newpage
+
+### Caso Ejemplo A: Peso del Pollo respecto del Alimento
+
+Cargamos los datos desde un paquete en R llamado $datasets$ desde donde trabajaremos. Cuenta con dos variables, el peso del pollo (nuestro $Y$) y el tipo de Alimento, como variable categórica 
+
+```{r}
+library(datasets)
+head(chickwts)
+
+```
+
+```{r Comprender la variabilidad}
+library(ggplot2)
+print(ggplot(chickwts, aes(x=feed, y=weight)) + geom_boxplot() + theme_minimal())
+```
+#### ¿Qué porcentaje de la varianza del peso de los pollos es explicada por el tipo de comida?
+
+```{r Análisis de la varianza}
+# ¿Por qué hay pollos que son más ligeros y otros que son más pesados
+# ¿Qué porcentaje de la varianza del peso de los pollos es explicada por el tipo de comida?
+oneway <- aov(chickwts$weight~chickwts$feed)
+summary(oneway)
+
+```
+
+Aquí la variablidad que es explicada por la variable categórica es 231129. Al dividir la Sum Square con los grados de libertad (Df) nos da el Mean sQ. Si los errores del modelo sigue una ley normal, entonces el F value del F estadístico sigue una ley Fisher. Nuestro objetivo es comprender la variabilidad de los datos. Responder **¿Por qué está variando el peso de los pollos cuando cambio el tipo de comida?** En este caso observamos que la variable cumple con un comportamiento que es pertinente para explicar el por qué varía el peso de los pollos.
+
+
+
+El test de Fisher en una ANOVA:
+Basándonos en que si los errores del modelo siguen la ley Normal, entonces el estadístico $p-value$ sigue exactamente una Ley Fisher. Si, por el contrario, los errores no siguen una Ley Normal, pero que son iid con varianza de los errores constante, entonces aproximadamente $p-value$ sigue una Ley de Fisher. Entonces podríamos usar este método de verificación de la varianza de una variable cuantitativa.
+
+$$H_{0}:\ La\ variable\ categórica\ no\ es\ pertinente \Rightarrow p-value>0.05$$
+
+
+$$H_{1}:\ La\ variable\ categórica\ es\ pertinente\Rightarrow p-value<0.05$$
+
+```{r Calculo de la razón de correlación}
+razon <- 231129 / (195556 + 231129)
+print(sprintf("La razón de correlación sería: %.2f%%", razon * 100))
+
+```
+La razon de correlación nos ayuda en casos en que las variables Y e X no son cuantitativas, sino categóricas. En caso contrario ocupamos los casos de correlación de kendall, pearson o Spearman. 
+
+$$0\le Razón\_Correlación\ = \frac{Varianza\ variable\ explicativa}{Varianza\ Total}\le1$$
+Antes de interpretar este tipo de modelos, dar énfasis en que este tipo de modelos no ocupan una recta, ya que no son valores continuos entre cada categoría. Por eso utilizamos los gráficos de Boxplot.
+
+
+#### ¿Cuánto explica del peso de los pollos el tipo de comida?
+
+```{r Regresión}
+reg <- lm(chickwts$weight ~ chickwts$feed)
+summary(reg)
+```
+*Se observa que el peso de los pollos, tomando como categoría de referencia a aquellos alimentados con casein, presenta un promedio de 323 gramos. Este valor corresponde al intercepto del modelo, e indica el peso medio esperado bajo dicha alimentación, asumiendo todo lo demás constante.*
+
+Comparativamente, los pollos alimentados con:
+
+horsebean pesan en promedio 163.38 gramos menos que aquellos con casein;
+
+linseed, 104.83 gramos menos;
+
+meatmeal, 46.67 gramos menos;
+
+soybean, 77.16 gramos menos;
+
+y sunflower, 5.33 gramos más en promedio que los alimentados con casein.
+
+*No obstante, para el grupo alimentado con sunflower, no existe evidencia estadísticamente significativa que indique una diferencia real respecto al grupo de referencia, ya que su valor-p es elevado (p = 0.812). En otras palabras, no se rechaza la hipótesis nula de que no hay diferencia entre sunflower y casein.*
+
+Cabe destacar que, aunque los coeficientes del modelo muestran diferencias de peso, la validez del modelo también depende de cumplir ciertos supuestos, como la normalidad de los errores, homocedasticidad y ausencia de autocorrelación. En este modelo, los valores t se distribuyen según la distribución t de Student bajo dichos supuestos, lo que permite evaluar la significancia de cada coeficiente.
+
+En conclusión, el tipo de alimento tiene un efecto significativo sobre el peso de los pollos. El alimento casein aparece como el más efectivo en términos de peso promedio, mientras que dietas como horsebean y linseed se asocian con reducciones considerables y estadísticamente significativas en el peso.
+
+\newpage
+
+
+### Caso Ejemplo B.a: Potencia(km por litro de bencina) del motor vs Variables de características de los modelos de Auto (Modelo Aditivo sin Interacción)
+
+```{r}
+mtcars2 <-within(mtcars, {
+  vs<-factor(vs,labels=c("v","s")) #Tipo de Motor (0 y 1)
+  am<-factor(am,labels=c("automatic","manual")) #Transmisión (0 y 1)
+})
+head(mtcars2)
+```
+
+```{r}
+ggplot(mtcars2,aes(x=vs,y=mpg)) + geom_boxplot() + theme_minimal()
+ggplot(mtcars2,aes(x=am,y=mpg)) + geom_boxplot() + theme_minimal()
+```
+Vemos en un primer momento, que los autos automáticos tienen un menor rendimiento, y por tanto, son más gastadores que los autos manuales. Lo mismo pasa cuando revisamos el tipo de motor, donde aquellos con un motor v son más consumidores que los con un motor tipo s. Ahora, si analizamos la varianza, obtenemos que ambos son significativos:
+
+```{r}
+twoway1 <- aov(mpg ~ vs + am, data=mtcars2)
+summary(twoway1)
+```
+#### ¿Cuánto explica del KM/LT de bencina el tipo de motor y la transmisión de este?
+
+```{r}
+reg1<-lm(mpg ~ vs + am, data=mtcars2)
+summary(reg1)
+```
+Valor esperado de mpg para un auto con motor en V (vs = 0) y transmisión automática (am = 0); Los autos con motor en línea consumen en promedio 6.93 millas por galón más que los de motor en V, ceteris paribus; Los autos con transmisión manual consumen en promedio 6.07 millas por galón más que los de transmisión automática, ceteris paribus
+
+
+El modelo lineal estimado muestra que tanto el tipo de motor (vs) como la transmisión (am) influyen significativamente en el rendimiento de combustible (mpg) de los vehículos.
+
+Los autos con motor en línea tienen en promedio un consumo 6.93 mpg mayor que los autos con motor en V, manteniendo constante el tipo de transmisión. Asimismo, los vehículos con transmisión manual presentan un rendimiento 6.07 mpg superior en comparación con los de transmisión automática, manteniendo constante el tipo de motor.
+
+El modelo es estadísticamente significativo y explica cerca del 69% de la variabilidad observada en mpg, sugiriendo un buen poder explicativo en el contexto de análisis exploratorio. Sin embargo, para una inferencia completa, se recomienda evaluar los supuestos del modelo (normalidad de los residuos, homocedasticidad y ausencia de colinealidad).
+
+
+### Caso Ejemplo B.b: Potencia(km por litro de bencina) del motor vs Variables de características de los modelos de Auto (Modelo Aditivo con Interacción)
+
+#### ¿Qué porcentaje de la varianza del KM/LT de bencina es explicada por el tipo de motor y la transmisión de este?
+
+Vemos que la interacción no se potencia ni es significativa entre las variables transmisión y tipo de motor. Además se comprueba en el modelo lineal
+
+```{r}
+twoway2<-aov(mpg ~ vs + am + vs*am, data=mtcars2)
+summary(twoway2)
+```
+```{r}
+reg2<-lm(mpg ~ vs + am + vs*am, data=mtcars2)
+summary(reg2)
+```
+
+

@@ -1,0 +1,270 @@
+---
+title: "Notebook_Clase5_y_6_Evaluacion_Modelos_Outliers_Colinealidad"
+author: "Diego Figueroa"
+date: "2025-06-01"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### El problema Fundamental en Ciencia de Datos para Modelos Predictivos
+
+#### Trade-off entre Sesgo y Varianza
+
+En modelos predictivos, buscamos minimizar el error total. Este error se puede descomponer en tres partes:
+
+$$
+\mathbb{E}\left[(\hat{f}(x) - f(x))^2\right] = \left(\text{Bias}[\hat{f}(x)]\right)^2 + \text{Var}[\hat{f}(x)] + \sigma^2
+$$
+
+- **Sesgo (Bias)**: Error por hacer suposiciones demasiado simples sobre los datos. Conduce a *underfitting*.
+- **Varianza (Variance)**: Error por hacer el modelo muy sensible a las variaciones del conjunto de entrenamiento. Conduce a *overfitting*.
+- **\( \sigma^2 \)**: Error irreducible debido al ruido en los datos.
+
+---
+
+#### Gráfico conceptual (para agregar en un informe)
+
+
+
+```{r, echo=FALSE, out.width="80%", fig.align="center"}
+knitr::include_graphics("C:/Users/diego/OneDrive/Escritorio/Diplomado Data Science/Diplomado PUCV/clase1_r_supervised_pca_regression_2025/resources/bias_variance_tradeoff.png")
+
+```
+
+#### Ejemplos:
+- **Modelo con alto sesgo**: Regresión lineal simple sobre datos no lineales.
+- **Modelo con alta varianza**: Árbol de decisión sin podar o regresión polinomial de alto grado.
+
+\newpage
+
+### Problemas comunes en regresión lineal múltiple
+
+---
+
+#### 1. Outliers
+
+##### Diagnóstico:
+- Visualización con gráficos de residuos.
+- Distancia de Cook \( D_i \):
+  
+  $$
+  D_i = \frac{(e_i^2)}{p \cdot \hat{\sigma}^2} \cdot \left( \frac{h_{ii}}{(1 - h_{ii})^2} \right)
+  $$
+
+##### Soluciones:
+- Transformaciones (log, raíz cuadrada).
+- Regresión robusta (ej: `rlm()` en R).
+- Winsorización de extremos.
+
+---
+
+#### 2. Multicolinealidad
+
+##### Diagnóstico:
+- VIF (Variance Inflation Factor):
+
+  $$
+  \text{VIF}_j = \frac{1}{1 - R_j^2}
+  $$
+
+- Si \( \text{VIF}_j > 5 \): hay evidencia de multicolinealidad.
+
+##### Soluciones:
+- Eliminar variables altamente correlacionadas.
+- Transformar o combinar predictores (ej: PCA).
+- Usar **Ridge Regression**:
+
+  $$
+  \min_{\beta} \left\{ \sum_{i=1}^{n}(y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} \beta_j^2 \right\}
+  $$
+### Ejemplo Simulado
+
+```{r}
+eps<-rnorm(90)
+eps2<-rnorm(90)*0.01
+x1<-rnorm(90)*2
+x2<-0.5*x1+eps2
+x3<-rnorm(90)
+y=3*x1+8*x2+2*x3+3+eps
+lin<-lm(y~x1+x2+x3)
+summary(lin)
+cor.test(x1,x2)
+
+X<-matrix(1,90,4)
+X[,2]<-x1
+X[,3]<-x2
+X[,4]<-x3
+solve(t(X)%*%X)
+```
+\newpage
+
+### Regularización: LASSO, Ridge y Elastic Net
+
+La regularización es una técnica que permite controlar la complejidad del modelo y evitar el sobreajuste (overfitting) penalizando los coeficientes de la regresión. A continuación, se detallan tres métodos ampliamente utilizados:
+
+---
+
+#### Ridge Regression (Regresión de cresta)
+
+Penaliza la suma de los cuadrados de los coeficientes. La función objetivo a minimizar es:
+
+$$
+\min_{\beta} \left\{ \sum_{i=1}^{n}(y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} \beta_j^2 \right\}
+$$
+
+Donde:
+- \( \lambda \) es el parámetro de penalización,
+- \( \beta_j \) son los coeficientes del modelo,
+- \( y_i \) es la variable dependiente,
+- \( \hat{y}_i \) es la predicción del modelo.
+
+Buscamos solucionar:
+- La colinealidad de baja dimensión (pocos predictores)
+
+---
+
+#### LASSO (Least Absolute Shrinkage and Selection Operator)
+
+Penaliza la suma de los valores absolutos de los coeficientes, lo que puede llevar a que algunos coeficientes se reduzcan exactamente a cero (selección de variables):
+
+$$
+\min_{\beta} \left\{ \sum_{i=1}^{n}(y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} |\beta_j| \right\}
+$$
+Buscamos solucionar:
+- El problema de colinealidad de alta dimensión (muchos predictores y observaciones)
+
+
+---
+
+#### Elastic Net
+
+Es una combinación entre Ridge y LASSO, ponderada por un parámetro de mezcla \( \alpha \in [0, 1] \):
+
+$$
+\min_{\beta} \left\{ \sum_{i=1}^{n}(y_i - \hat{y}_i)^2 + \lambda \left[ \alpha \sum_{j=1}^{p} |\beta_j| + (1 - \alpha) \sum_{j=1}^{p} \beta_j^2 \right] \right\}
+$$
+
+- Si \( \alpha = 1 \), se obtiene LASSO.
+- Si \( \alpha = 0 \), se obtiene Ridge.
+
+---
+
+En R, estos modelos se pueden ajustar con la función `glmnet()` del paquete `glmnet`. Por ejemplo:
+
+```r
+library(glmnet)
+glmnet(x, y, alpha = 0)   # Ridge
+glmnet(x, y, alpha = 1)   # LASSO
+glmnet(x, y, alpha = 0.5) # Elastic Net
+```
+
+\newpage
+
+### ¿Qué hacer cuando la regularización no soluciona la Colinealidad?
+
+En ciencia de datos, cuando enfrentamos **alta multicolinealidad** o un número elevado de predictores, podemos utilizar modelos que combinan regresión con **reducción de dimensionalidad**, como:
+
+- **PCR** (Principal Component Regression)
+- **PLS** (Partial Least Squares)
+
+**¿Por qué no usar directamente LASSO o Ridge?**
+
+LASSO y Ridge buscan reducir el sobreajuste penalizando los coeficientes del modelo (regularización), pero:
+
+- No transforman las variables predictoras.
+
+- Si hay multicolinealidad fuerte, no eliminan completamente el problema, aunque lo mitigan.
+
+Aquí es donde PCR y PLS entran como estrategias basadas en transformación de los datos.
+
+
+#### 1. Principal Component Regression (PCR)
+
+#### 📌 Idea
+
+PCR aplica primero Análisis de Componentes Principales (PCA) sobre los predictores \( \mathbf{X} \), y luego utiliza los primeros \( k \) componentes para ajustar una regresión lineal sobre la variable respuesta \( y \).PCR no considera la variable respuesta $y$ al crear los componentes. Es decir, puede elegir componentes que explican mucha varianza en $X$, pero no necesariamente son relevantes para predecir $y$
+
+#### 🧮 Ecuación
+
+Sea:
+
+- \( \mathbf{X} \): matriz de predictores
+- \( \mathbf{W} \): vectores propios de PCA
+- \( \mathbf{Z} = \mathbf{XW} \): componentes principales
+
+Entonces el modelo es:
+
+$$
+y = \mathbf{Z} \beta + \epsilon
+$$
+
+> **Importante**: los componentes son seleccionados solo para maximizar la varianza de \( \mathbf{X} \), no su relación con \( y \).
+
+Presenta problemas al hacer PCA, ya que pierdo poder predictivo (incremento el sesgo) al solo tomar los k componentes, ya que los n-k componentes restantes, siendo n el total de componentes principales generados, no están siendo incluidos y que sí aportan información predictiva. Pierdo bondad de ajuste.PCA elige los componentes que explican la mayor varianza en los regresores $X$, sin tener en cuenta si esos componentes están relacionados con la variable respuesta $Y$. 
+
+---
+
+\newpage
+
+
+#### 2. Partial Least Squares Regression (PLS)
+
+##### 📌 Idea
+
+PLS también reduce la dimensionalidad, pero a diferencia de PCR, busca componentes que **maximizan simultáneamente** la varianza en \( \mathbf{X} \) y la covarianza con \( y \).
+
+##### 🧮 Ecuación
+
+El primer componente se define como:
+
+$$
+T_1 = \mathbf{X} w_1 \quad \text{con } w_1 = \arg\max \text{Cov}(\mathbf{X}w, y)^2
+$$
+
+Luego se ajusta:
+
+$$
+y = T \beta + \epsilon
+$$
+
+donde \( T = \mathbf{XW} \).
+
+> **Ventaja**: al considerar \( y \) en la creación de los componentes, suele tener mejor desempeño predictivo que PCR.
+
+---
+
+### 🔍 Comparación
+
+\[
+\begin{array}{|l|c|c|}
+\hline
+\textbf{Característica} & \textbf{PCR} & \textbf{PLS} \\
+\hline
+Usa \ y \ para crear componentes & \text{No} & \text{Sí} \\
+\hline
+Reduce dimensionalidad & \text{Sí (PCA)} & \text{Sí (Covarianza)} \\
+\hline
+Manejo de multicolinealidad & \text{Sí} & \text{Mejor} \\
+\hline
+Enfoque predictivo & \text{Moderado} & \text{Alto} \\
+\hline
+Interpretabilidad & \text{Baja} & \text{Media} \\
+\hline
+\end{array}
+\]
+
+---
+
+
+### 📌 Cuándo usar cada uno
+
+- Multicolinealidad severa: **PLS** o **PCR**
+- Muchas variables predictoras: **LASSO**, **PLS**
+- Predicción pura: **PLS**
+- Interpretabilidad: **Ridge**, **LASSO**
+
+
+

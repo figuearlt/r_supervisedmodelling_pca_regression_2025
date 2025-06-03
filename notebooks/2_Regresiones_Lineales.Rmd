@@ -395,14 +395,6 @@ marketing[90,]
 ```
 
 
-
-
-
-```{r ANOVA}
-#ANOVA
-summary(aov(sales~youtube+facebook+newspaper, data=train.datos))
-```
-
 ```{r Residuos}
 #Residuos
 e=residuals(linear_model_sales)

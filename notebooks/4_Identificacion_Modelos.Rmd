@@ -1,0 +1,263 @@
+---
+title: "Identificación del Modelo"
+author: "Diego Figueroa"
+date: "2025-05-29"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Selección e Identificación de Modelos
+
+La identificación de un modelo adecuado es un paso esencial en la construcción de modelos de regresión, donde se busca balancear la bondad de ajuste y la complejidad del modelo. A continuación, se resumen los métodos más utilizados:
+
+### 1. Criterios de Información: AIC y BIC
+
+Los criterios de información penalizan la complejidad del modelo con el fin de evitar sobreajuste.
+
+- **Akaike Information Criterion (AIC):**
+
+El AIC se define como:
+
+$$
+AIC = 2k - 2\ln(\hat{L})
+$$
+
+donde \( k \) es el número de parámetros del modelo y \( \hat{L} \) es la verosimilitud máxima del modelo. Además este criterio es eficiente, es decir, minimiza el error de la predicción
+
+- **Bayesian Information Criterion (BIC):**
+
+El BIC es más estricto que el AIC en penalizar modelos complejos:
+
+$$
+BIC = \ln(n)k - 2\ln(\hat{L})
+$$
+
+donde \( n \) es el número de observaciones. A diferencia del AIC, el BIC es convergente, es decir, lleva a modelos más correctos
+
+> En ambos criterios, **valores más bajos indican modelos preferibles**.
+
+---
+
+### 2. Selección Paso a Paso: Forward y Backward
+
+Estos métodos consisten en seleccionar variables de manera secuencial, ya sea agregándolas o eliminándolas.
+
+- **Forward Selection (Selección hacia adelante):**
+  1. Comienza con un modelo vacío.
+  2. Agrega la variable que más mejora un criterio (AIC, BIC, etc.).
+  3. Repite hasta que no haya mejora.
+
+- **Backward Elimination (Eliminación hacia atrás):**
+  1. Comienza con el modelo completo (todas las variables).
+  2. Elimina la variable menos significativa.
+  3. Repite hasta que eliminar variables ya no mejora el modelo.
+
+- **Stepwise Selection (Selección por pasos):** combinación de ambos métodos anteriores.
+
+> En R se puede usar:  
+
+```{r}
+step(model, direction = "both", k = 2)  # k = 2 es AIC; k = log(n) es BIC
+```
+
+
+En general las herramientas para elegir el modelo utilizan informaciones "globales" (varios regresores son implicados).
+Pero bien queremos conocer el efecto de una variable $X_{j}$ sibre $Y$ una vez la influenza de los otros regresores eliminada.
+
+- **Coeficiente de correlación parcial** entre Y y $X_j$("dados" los $X_k, k\neq j$) ¿Qué tiene $X_i$ en específico o de original respecto a explicar la varianza de Y, dejando de lado la explicación de las otras variables $X_j$. La denotamos por $\text{Correlación parcial: } \rho_{X,Y|Z}$
+
+
+#### Ejemplo con Datos Reales:
+
+
+```{r}
+head(mtcars)
+str(mtcars)
+#Defino las variables categóricas ordinal
+mtcars2 <- within(mtcars, {
+  vs <- factor(vs, labels=c("v","s"))
+  am <- factor(am, labels=c("automatic","manual"))
+  cyl <- factor(cyl, labels=c("4","6","8"))
+  gear <- factor(gear, labels=c("3","4","5"))
+  carb <- factor(carb, labels=c("1","2","3","4","6","8"))
+}) 
+# Eliminamos las variables categóricas nominal (aquellas que no tienen niveles de mayor a menor)
+z <- c(-8,-9)
+mtcars3 <- mtcars[,z]
+
+```
+
+
+
+
+```{r}
+
+# Comparación de correlación y correlación parcial
+library(ppcor)
+cor(mtcars3, method="kendall")
+
+
+```
+
+```{r}
+pcor(mtcars3, method="kendall")
+```
+Observamos que entre las correlaciones con método de kendall y la correlación parcial con mismo método, hay una alta influencia de las variables entre sí. Vemos que de una alta correlación negativa de cyl respecto a la influencia con mpg, en la correlación es alta, mientras que al revisar la parcial esta se diluye bastante. Con esto podemos mencionar que podemos reducir el número de dimensiones por medio de seleccionar aquellos valores que existe alta interacción entre las variables, y seleccionamos aquellas que no pueden ser reemplazadas para explicar la varianza de mpg.
+
+De hecho al evaluar con \$p.value el valor de significancia de esas correlaciones parciales, observamos que varias variables no existe evidencia suficiente para rechazar que son correlaciones parciales distintas a 0. Edsto nos puede guiar en nuestro camino para armar un modelo.
+
+Debido al alto valor de modelos posibles con las variables disponibles ($2^{10}-1=1023\ modelos\ posibles$) hay que ir con algoritmos que minimicen criterios de información, AIC y BIC, aplicando de manera secuencial criterio de Fisher, podemos construir un modelo. Se recomienda utilizar una serie de modelos según diferentes criterios de selección. Con esto podemos comparar y finalmente seleccionar aquellos que nos ayudan.
+
+##### AIC FORWARD
+
+```{r}
+library(MASS)
+# AIC con Forward
+fit1<-lm(mpg~1,data=mtcars2)# Punto de partida
+forw<-stepAIC(fit1,scope = list(upper=~cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb,lower=~1),direction='forward')
+
+# Según el criterio de AIC por el método forward, el modelo es mpg ~ wt + cyl + hp + am
+```
+```{r}
+forw$anova # Agregando las variables que nos dan el minimo AIC posible a cada paso
+
+```
+```{r}
+ajusteAIC <- lm(mpg ~ wt + cyl + hp + am,data=mtcars2)
+summary(ajusteAIC)
+```
+\newpage
+
+##### BIC FORWARD
+
+```{r}
+forwBIC<-stepAIC(fit1,scope = list(upper=~cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb,lower=~1),k=log(dim(mtcars2)[1]),direction='forward')
+```
+```{r}
+ajusteBIC<-lm(mpg~wt+hp,data=mtcars2)
+summary(ajusteBIC)
+
+```
+\newpage
+
+##### Test F FORWARD
+```{r}
+#Vamos a ocupar el Forward con el test F:
+add1(fit1, scope=~cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, test = "F")
+```
+
+```{r}
+add1(update(fit1, ~ . +wt), scope=~cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, test = "F")#etapa1: agregamos la variable más significativa "wt" con los criterios anteriores y por medio del coeficiente de Fisher (Mayor F value). Este predictor es el más pertinente.
+```
+
+
+
+```{r}
+add1(update(fit1, ~ . +wt+hp), scope=~cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, test = "F")#etapa1: agregamos "cyl" y luego, no hay más variables significativas
+
+
+```
+
+```{r}
+ajusteFF<-lm(mpg ~ wt + hp,data=mtcars2)
+summary(ajusteFF)
+```
+\newpage
+
+##### AIC BACKWARD
+
+```{r}
+#Ahora vamos con el backward considerando el AIC
+fit2<-lm(mpg~cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb,data=mtcars2)
+backw <- stepAIC(fit2, direction="backward")
+backw$anova
+```
+```{r}
+ajusteBAIC<-lm(mpg ~ cyl + hp + wt + am,data=mtcars)
+summary(ajusteBAIC)
+
+```
+##### Test F BACKWARD
+
+```{r}
+#Vamos a ocupar el Backward con el test F:
+
+fit2<-lm(mpg~cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb,data=mtcars2)
+drop1(fit2, test = "F")
+drop1(update(fit2, ~ . -carb), test = "F")#etapa 1: se elimina la variable la menos significativa
+drop1(update(fit2, ~ . -carb-disp), test = "F")#etapa 2: lo mismo
+drop1(update(fit2, ~ . -carb-disp-gear), test = "F")
+drop1(update(fit2, ~ . -carb-disp-gear-drat), test = "F")
+drop1(update(fit2, ~ . -carb-disp-gear-drat-qsec), test = "F")
+drop1(update(fit2, ~ . -carb-disp-gear-drat-qsec-vs), test = "F")
+drop1(update(fit2, ~ . -carb-disp-gear-drat-qsec-vs-am), test = "F")
+drop1(update(fit2, ~ . -carb-disp-gear-drat-qsec-vs-am-cyl), test = "F")
+#Se termina el algoritmo, todas las variables son significativas
+```
+\newpage
+
+##### AIC STEPWISE
+
+```{r}
+#Ahora vamos con el stepward considerando el AIC
+fitstep<-lm(mpg~cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb,data=mtcars2)
+stepw <- stepAIC(fitstep, direction="both")
+stepw$anova#mismo modelo que el forward con AIC
+```
+
+\newpage
+
+##### BIC STEPWISE
+
+```{r}
+#Ahora vamos con el stepward considerando el AIC
+fitstep<-lm(mpg~cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb,data=mtcars2)
+stepw <- stepAIC(fitstep, k=log(dim(mtcars2)[1]),direction="both")
+stepw$anova#mismo modelo que el forward con AIC
+```
+\newpage
+
+##### Estadístico de Mallows \( C_p \)
+
+
+El estadístico de Mallows se utiliza para evaluar la calidad de modelos con diferentes subconjuntos de predictores. Se define como:
+
+$$
+C_p = \frac{\text{SSE}_p}{\hat{\sigma}^2} - (n - 2p)
+$$
+
+Donde:
+- \( \text{SSE}_p \) es la suma de errores al cuadrado del modelo con \( p \) predictores,
+- \( \hat{\sigma}^2 \) es la varianza estimada del error del modelo completo,
+- \( n \) es el número de observaciones,
+- \( p \) es el número total de parámetros del modelo (incluyendo el intercepto).
+
+#### Interpretación:
+- Si \( C_p \approx p \): el modelo tiene buen equilibrio entre sesgo y varianza.
+- Si \( C_p > p \): el modelo puede estar sesgado (le faltan variables).
+- Si \( C_p < p \): el modelo puede estar sobreajustado (tiene ruido o predictores irrelevantes).
+
+#### En selección de variables:
+El estadístico \( C_p \) se puede usar durante los procedimientos **Forward**, **Backward** o **Stepwise** para identificar el modelo óptimo en cuanto a balance entre complejidad y ajuste.
+
+
+
+```{r}
+#Podemos por ejemplo considerar el Cp de Mallows para elegir entre unos modelos candidatos
+#Cuidado que es mejor ocupar el Cp de Mallows con tamaños muestrales grandes (aqui tenemos #solo 32 datos...)
+
+modelo.completo<-lm(mpg~.,data=mtcars2)
+modelo.AIC<-lm(mpg~wt + cyl + hp+am,data=mtcars2)
+modelo.BIC<-lm(mpg~wt + hp,data=mtcars2)
+
+library(olsrr)
+ols_mallows_cp(modelo.AIC, modelo.completo)
+ols_mallows_cp(modelo.BIC, modelo.completo)
+```
+El modelo con BIC al ser $C≈p$ el modelo tiene buen equilibrio entre sesgo y varianza, mientras que el modelo AIC al ser $C<p$ el modelo puede estar sobreajustando (incluye variables irrelevantes)
+
+
+

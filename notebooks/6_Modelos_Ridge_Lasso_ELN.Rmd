@@ -1,0 +1,64 @@
+---
+title: "Notebook_Clase_6_Modelos_RIDGE_LASSO_ELN"
+author: "Diego Figueroa"
+date: "2025-06-01"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Regularización: LASSO, Ridge y Elastic Net
+
+La regularización es una técnica que permite controlar la complejidad del modelo y evitar el sobreajuste (overfitting) penalizando los coeficientes de la regresión. A continuación, se detallan tres métodos ampliamente utilizados:
+
+---
+
+#### Ridge Regression (Regresión de cresta)
+
+Penaliza la suma de los cuadrados de los coeficientes. La función objetivo a minimizar es:
+
+$$
+\min_{\beta} \left\{ \sum_{i=1}^{n}(y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} \beta_j^2 \right\}
+$$
+
+Donde:
+- \( \lambda \) es el parámetro de penalización,
+- \( \beta_j \) son los coeficientes del modelo,
+- \( y_i \) es la variable dependiente,
+- \( \hat{y}_i \) es la predicción del modelo.
+
+---
+
+#### LASSO (Least Absolute Shrinkage and Selection Operator)
+
+Penaliza la suma de los valores absolutos de los coeficientes, lo que puede llevar a que algunos coeficientes se reduzcan exactamente a cero (selección de variables):
+
+$$
+\min_{\beta} \left\{ \sum_{i=1}^{n}(y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p} |\beta_j| \right\}
+$$
+
+---
+
+#### Elastic Net
+
+Es una combinación entre Ridge y LASSO, ponderada por un parámetro de mezcla \( \alpha \in [0, 1] \):
+
+$$
+\min_{\beta} \left\{ \sum_{i=1}^{n}(y_i - \hat{y}_i)^2 + \lambda \left[ \alpha \sum_{j=1}^{p} |\beta_j| + (1 - \alpha) \sum_{j=1}^{p} \beta_j^2 \right] \right\}
+$$
+
+- Si \( \alpha = 1 \), se obtiene LASSO.
+- Si \( \alpha = 0 \), se obtiene Ridge.
+
+---
+
+En R, estos modelos se pueden ajustar con la función `glmnet()` del paquete `glmnet`. Por ejemplo:
+
+```r
+library(glmnet)
+glmnet(x, y, alpha = 0)   # Ridge
+glmnet(x, y, alpha = 1)   # LASSO
+glmnet(x, y, alpha = 0.5) # Elastic Net
