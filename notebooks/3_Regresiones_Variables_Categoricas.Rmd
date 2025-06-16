@@ -144,8 +144,9 @@ summary(reg)
 Cargamos los datos desde un paquete en R llamado $datasets$ desde donde trabajaremos. Cuenta con dos variables, el peso del pollo (nuestro $Y$) y el tipo de Alimento, como variable categórica 
 
 ```{r}
-library(datasets)
+library(datasets) 
 head(chickwts)
+str(chickwts)
 
 ```
 
@@ -219,7 +220,7 @@ En conclusión, el tipo de alimento tiene un efecto significativo sobre el peso 
 
 ```{r}
 mtcars2 <-within(mtcars, {
-  vs<-factor(vs,labels=c("v","s")) #Tipo de Motor (0 y 1)
+  vs<-factor(vs,labels=c("v","s")) # Tipo de Motor (0 y 1)
   am<-factor(am,labels=c("automatic","manual")) #Transmisión (0 y 1)
 })
 head(mtcars2)

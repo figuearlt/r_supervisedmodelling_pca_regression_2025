@@ -1,0 +1,166 @@
+---
+title: "Notebook_Clase_6_Outliers"
+author: "Diego Figueroa"
+date: "2025-06-16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Estudio de Outliers ##
+
+```{r}
+plot(mtcars$wt,mtcars$mpg)
+```
+Hay 3 autos que parecen tener un consumo demasiado bajo por su peso (son tres autos) 
+#===> Lo que sigue puede ser un estudio preliminar a la detección de fraude?
+
+```{r}
+fit <- lm(mpg~wt, data=mtcars) # 
+summary(fit)
+```
+Este modelo nos reduce el cuadrado de los errores, y por tanto se ve afectada a la presencia de outliers
+
+## Detección de outliers ##
+
+```{r}
+library(car)
+hatvalues(fit)
+```
+
+Revisando el efecto palance o leverage, vemos que los autos Lincoln Continental, Cadillac Fleetwood y Chrysler Imperial tienen un alto hatvalue, es decir están moviendo la predicción del modelo (la línea de este).
+
+```{r}
+outlierTest(lm(mtcars$mpg~mtcars$wt))
+mtcars[18,]
+```
+Aquí revisamos los residuos estudentizados que diagnostica las observaciones que son outliers respecto de la variable predicha (variable dependiente). Aquí estamos fuera el límite del valor absoluto de los residuos estudentizados (revisar criterios para detectar outliers), y al identificarla, nos damos cuenta que es el Fiat 128
+
+
+
+```{r}
+influencePlot(fit)
+```
+
+Según el profe, los valores de los últimos dos modelos de autos no corresponden a reales outliers, ya que pueden estar siendo afectados respecto de los dos primeros al momento de hacer el modelo y "mueva la aguja" estos, dejando a los dos últimos como valores outliers.
+
+```{r}
+#Calcular la distancia de Cook
+n<-nrow(mtcars)
+print(n)
+p <- 1 # 1 Predictor sin contar el intercepto
+gl <- n-p-1#grados_libertad
+gl
+
+dcook <-4/gl # Límite Distancia de Cook para observación muy influyente
+
+dcook
+```
+
+```{r}
+#install.packages("olsrr")
+library(olsrr)
+ols_plot_cooksd_bar(fit)
+```
+Nos permite identificar los outliers por medio del cálculo de la Distancia de Cook. Es decir, son observaciiones outliers-influyentes
+
+```{r}
+ols_plot_dfbetas(fit)
+```
+Nos muestra la influecia en los betas por parte de las observaciones. Vemos las filas que sí influencian las observaciones. Con el gráfico anterior veíamos la influencia general por distancia de Cook
+
+```{r}
+ols_plot_dffits(fit)
+```
+
+Ahora veríamos la DFFITS sobre de la influencia de las observaciones respecto de la predicción del modelo y vemos que son las observaciones 17,18 y 20
+
+```{r}
+covratio(fit)
+graf.cov<-abs(covratio(fit)-1)
+```
+
+```{r}
+plot(graf.cov)
+abline(h=3*2/length(mtcars$wt),lty=2)
+```
+Ahora, revisando que seguimos viendo la influencia de las mismas observaciones, utilizando el criterio de CovRatio
+
+```{r}
+#install.packages("qpcR")
+library(qpcR)
+PRESS(fit)
+aov(fit)
+```
+Al realizar el cálculo del PRESS y revisar el SSE, vemos que por criterio de PRESS existe influencia de outliers influyentes a un nivel general en el modelo.
+
+
+## Estimación Robusta
+
+
+```{r}
+#install.packages("mblm")
+library(mblm)
+lin2<-mblm(mpg~wt,data=mtcars,repeated=TRUE)
+summary(lin2)
+```
+Aquí la interpretación es que por cada unidad de peso que yo aumente, vamos a recorrer -5 millas (Compararlo respecto al summary de fit)
+
+```{r}
+lin3<-mblm(mpg~wt,data=mtcars,repeated=FALSE)
+summary(lin3)
+plot(mtcars$wt,mtcars$mpg)
+abline(lin3)
+```
+```{r}
+library(MASS)
+head(UScereal)
+?UScereal
+```
+```{r}
+UScereal2<-within(UScereal,{
+  mfr <- factor(mfr,labels=c("G","K","N","R","P","Q"))
+  shelf<-factor(shelf,labels=c("1","2","3"))
+  vitamins<-factor(vitamins,labels=c("none","enriched","100%"))
+})
+```
+
+```{r}
+set.seed(123)
+train.filas<-sample(nrow(UScereal2),0.8*nrow(UScereal2),replace=FALSE)
+train.datos<-UScereal2[train.filas,]
+test.datis<-UScereal2[-train.filas,]
+summary(train.datos)
+```
+```{r}
+fit<-lm(calories~1,data=train.datos)
+forw<-stepAIC(fit,scope=list(upper=~mfr+protein+sodium+fibre+carbo+sugars+shelf+potassium+vitamins,data=train.datos),direction = "forward")
+n<-nrow(train.datos)
+forwBIC<-stepAIC(fit,scope=list(upper=~mfr+protein+sodium+fibre+carbo+sugars+shelf+potassium+vitamins,data=train.datos),direction = "forward",k=log(n))
+```
+
+```{r}
+fitBIC<-lm(calories~carbo+sugars+fat+protein,data=train.datos)
+summary(fitBIC)
+```
+Valores significativos, y no es puro producto del azar.
+
+
+```{r}
+library(car)
+car::vif(fitBIC)
+influencePlot(fitBIC)
+```
+
+
+Hay datos que son muy influyentes. Entonces usamos un modelo M robusto
+
+```{r}
+m_est_model <- rlm(calories~carbo+sugars+fat+protein,data=train.datos)
+summary(m_est_model)
+
+```
+Se modifican los cálculos de los B. Correspondería ver la influencia de las observaciones pero respecto a los predictores, utilizando los otros métodos
+
